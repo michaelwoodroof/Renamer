@@ -1,7 +1,11 @@
 # Imports
+import base64
 import os
 import re
 import sys
+
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
 
 # Methods
 def rename():
@@ -10,7 +14,7 @@ def rename():
         f = open("prefixes.txt", "x")
         f.close()
 
-    if len(sys.argv) == 4 or len(sys.argv) == 5:
+    if len(sys.argv) == 4 or len(sys.argv) == 5 or len(sys.argv) == 6:
         # Verify arguments
         if os.path.isdir(sys.argv[1]):
             pattern = re.compile('[a-zA-Z]+')
@@ -63,14 +67,20 @@ def rename():
 
         updatePrefixes(sys.argv[2], str(counter))
 
-        print("Operation successful")
+        print("All files renamed")
 
         # Upload to Google Drive
         if len(sys.argv) == 5:
             if sys.argv[4] == "t" or sys.argv[4] == "T":
-                print("Upload started")
+                uploadToDrive(sys.argv[1])
+
+        # Remove files
+        if len(sys.argv) == 6:
+            if sys.argv[5] == "t" or sys.argv[5] == "T":
+                deleteFiles(sys.argv[1], sys.argv[2])
+
     else:
-        print("Invalid number of arguments : \nUse > Renamer.py <filepath> <prefix> <offset> & optional to upload to google drive add t\nExample > Renamer.py C:\\examplepath\\exampledirectory EX 0 T")
+        print("Invalid number of arguments : \nUse > Renamer.py <filepath> <prefix> <offset> <upload to drive {T or F}> <delete files after {T or F}> ")
 
 def isNewPrefix(prefix):
     if getPrefix(prefix) == 0:
@@ -107,6 +117,7 @@ def updatePrefixes(prefix, counter):
             list.append(l)
 
     f.close()
+    
     # Delete File
     os.remove("prefixes.txt")
 
@@ -117,6 +128,27 @@ def updatePrefixes(prefix, counter):
         fn.write(item)
 
     fn.close()
+
+def uploadToDrive(filepath):
+    print("Upload started:")
+    # Initialise Google Login variables
+    gl = GoogleAuth()
+    gl.LocalWebserverAuth()
+    drive = GoogleDrive(gl)
+    # Upload all files
+    for file in os.listdir(filepath):
+        filedes = filepath + "\\" + file
+        fd = drive.CreateFile({'title': file})
+        fd.SetContentFile(filedes)
+        fd.Upload()
+    print("All files uploaded")
+
+def deleteFiles(filepath, prefix):
+    for file in os.listdir(filepath):
+        if prefix in file:
+            # Delete Files
+            os.remove(filepath + "\\" + file)
+    print("All files deleted")
 
 # Execution of Methods
 rename()
